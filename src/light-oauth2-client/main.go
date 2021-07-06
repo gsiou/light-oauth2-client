@@ -72,6 +72,8 @@ func main() {
 		json.Unmarshal(configFile, &config)
 		fmt.Printf("%s %s %s %s %s", config.AuthUrl, config.TokenUrl, config.Callback, config.Username, config.Secret)
 		fmt.Printf("Running: " + port + "\n")
+		startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&redirect_uri=" + config.Callback
+		fmt.Printf("Link: %s \n", startUrl)
 		http.ListenAndServe(":"+port, nil)
 	}
 }
