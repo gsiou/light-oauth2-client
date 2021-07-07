@@ -15,7 +15,7 @@ import (
 )
 
 type Config struct {
-	AuthUrl, TokenUrl, Hostname, Username, Secret string
+	AuthUrl, TokenUrl, ClientURL, Username, Secret string
 }
 
 type TokenRequestBody struct {
@@ -29,9 +29,9 @@ func initConfig() {
 	fmt.Print("Token Url: ")
 	tokenUrl, _ := reader.ReadString('\n')
 	fmt.Print("LightOauth2Client url [default: http://localhost:12345]: ")
-	hostname, _ := reader.ReadString('\n')
-	if hostname == "\n" {
-		hostname = "http://localhost:12345"
+	clientURL, _ := reader.ReadString('\n')
+	if clientURL == "\n" {
+		clientURL = "http://localhost:12345"
 	}
 	fmt.Print("Username: ")
 	username, _ := reader.ReadString('\n')
@@ -40,23 +40,23 @@ func initConfig() {
 
 	authUrl = strings.Replace(authUrl, "\n", "", -1)
 	tokenUrl = strings.Replace(tokenUrl, "\n", "", -1)
-	hostname = strings.Replace(hostname, "\n", "", -1)
+	clientURL = strings.Replace(clientURL, "\n", "", -1)
 	username = strings.Replace(username, "\n", "", -1)
 	secret = strings.Replace(secret, "\n", "", -1)
 
 	config := Config{
-		AuthUrl:  authUrl,
-		TokenUrl: tokenUrl,
-		Hostname: hostname,
-		Username: username,
-		Secret:   secret,
+		AuthUrl:   authUrl,
+		TokenUrl:  tokenUrl,
+		ClientURL: clientURL,
+		Username:  username,
+		Secret:    secret,
 	}
 
 	file, _ := json.MarshalIndent(config, "", " ")
 
 	_ = ioutil.WriteFile("config.json", file, 0644)
 
-	fmt.Printf("%s %s %s %s %s \n", authUrl, tokenUrl, hostname, username, secret)
+	fmt.Printf("%s %s %s %s %s \n", authUrl, tokenUrl, clientURL, username, secret)
 }
 
 func readConfig() Config {
@@ -90,7 +90,7 @@ func reqCallback(res http.ResponseWriter, req *http.Request) {
 	// Construct token request body
 	reqBody := TokenRequestBody{
 		GrantType:   "code",
-		RedirectURI: config.Hostname + "/callback",
+		RedirectURI: config.ClientURL + "/callback",
 	}
 
 	reqBodyJson, _ := json.Marshal(&reqBody)
@@ -129,7 +129,7 @@ func main() {
 
 	} else {
 		config := readConfig()
-		startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&redirect_uri=" + config.Hostname + "/callback"
+		startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&redirect_uri=" + config.ClientURL + "/callback"
 		fmt.Printf("Link: %s \n", startUrl)
 		fmt.Printf("Running: " + port + "\n")
 		http.ListenAndServe(":"+port, nil)
