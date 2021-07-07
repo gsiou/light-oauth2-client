@@ -4,3 +4,4 @@ bin/*
 pkg/*
 !.keep
 config.json
+light-oauth2-client
