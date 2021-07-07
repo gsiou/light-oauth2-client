@@ -55,8 +55,6 @@ func initConfig() {
 	file, _ := json.MarshalIndent(config, "", " ")
 
 	_ = ioutil.WriteFile("config.json", file, 0644)
-
-	fmt.Printf("%s %s %s %s %s \n", authUrl, tokenUrl, clientURL, username, secret)
 }
 
 func readConfig() Config {
@@ -85,7 +83,6 @@ func reqCallback(res http.ResponseWriter, req *http.Request) {
 	config := readConfig()
 
 	bearer := base64.RawStdEncoding.EncodeToString([]byte(config.Username + ":" + config.Secret))
-	fmt.Printf("Bearer is %s \n", bearer)
 
 	// Construct token request body
 	reqBody := TokenRequestBody{
@@ -124,7 +121,6 @@ func main() {
 
 	flag.Parse()
 	if mustConfig {
-		fmt.Printf("Init config\n")
 		initConfig()
 
 	} else {
