@@ -70,17 +70,15 @@ func main() {
 		initConfig()
 
 	} else {
-		fmt.Printf("Reading config\n")
 		configFile, fileErr := ioutil.ReadFile("config.json")
 		if fileErr != nil {
 			log.Fatal("Config not found, please run with --config")
 		}
 		var config Config
 		json.Unmarshal(configFile, &config)
-		fmt.Printf("%s %s %s %s %s", config.AuthUrl, config.TokenUrl, config.Hostname, config.Username, config.Secret)
-		fmt.Printf("Running: " + port + "\n")
 		startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&redirect_uri=" + config.Hostname + "/callback"
 		fmt.Printf("Link: %s \n", startUrl)
+		fmt.Printf("Running: " + port + "\n")
 		http.ListenAndServe(":"+port, nil)
 	}
 }
