@@ -1,6 +1,9 @@
 # Light OAuth2 Client   
 Minimalistic zero-dependency cli client to test oauth2 services
 
+## Download
+https://github.com/gsiou/light-oauth2-client/releases/
+
 ## Usage
 ### Run first time (configure)
 ```sh
