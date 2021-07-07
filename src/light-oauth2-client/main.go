@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,6 +16,10 @@ import (
 
 type Config struct {
 	AuthUrl, TokenUrl, Hostname, Username, Secret string
+}
+
+type TokenRequestBody struct {
+	GrantType, RedirectURI string
 }
 
 func initConfig() {
@@ -53,8 +59,60 @@ func initConfig() {
 	fmt.Printf("%s %s %s %s %s \n", authUrl, tokenUrl, hostname, username, secret)
 }
 
+func readConfig() Config {
+	configFile, fileErr := ioutil.ReadFile("config.json")
+	if fileErr != nil {
+		log.Fatal("Config not found, please run with --config")
+	}
+	var config Config
+	json.Unmarshal(configFile, &config)
+	return config
+}
+
 func reqCallback(res http.ResponseWriter, req *http.Request) {
 	fmt.Println("Callback reached")
+
+	keys, ok := req.URL.Query()["code"]
+
+	if !ok || len(keys[0]) < 1 {
+		log.Println("Code parameter is missing")
+		return
+	}
+
+	code := keys[0]
+	fmt.Printf("Code is %s \n", code)
+
+	config := readConfig()
+
+	bearer := base64.RawStdEncoding.EncodeToString([]byte(config.Username + ":" + config.Secret))
+	fmt.Printf("Bearer is %s \n", bearer)
+
+	// Construct token request body
+	reqBody := TokenRequestBody{
+		GrantType:   "code",
+		RedirectURI: config.Hostname + "/callback",
+	}
+
+	reqBodyJson, _ := json.Marshal(&reqBody)
+	fmt.Printf("%s \n", []byte(reqBodyJson))
+	tokenRequest, err := http.NewRequest("POST", config.TokenUrl, bytes.NewBuffer([]byte(reqBodyJson)))
+	if err != nil {
+		fmt.Printf("Could not create token request %s \n", err)
+	}
+
+	tokenRequest.Header.Add("Authorization", bearer)
+
+	client := &http.Client{}
+	tokenResponse, err := client.Do(tokenRequest)
+	if err != nil {
+		fmt.Printf("Could not fetch token: %s \n", err)
+	}
+	defer tokenResponse.Body.Close()
+	tokenBody, err := ioutil.ReadAll(tokenResponse.Body)
+	if err != nil {
+		fmt.Printf("Could not parse token response: %s \n", err)
+	}
+	log.Println(string([]byte(tokenBody)))
 }
 
 func main() {
@@ -70,12 +128,7 @@ func main() {
 		initConfig()
 
 	} else {
-		configFile, fileErr := ioutil.ReadFile("config.json")
-		if fileErr != nil {
-			log.Fatal("Config not found, please run with --config")
-		}
-		var config Config
-		json.Unmarshal(configFile, &config)
+		config := readConfig()
 		startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&redirect_uri=" + config.Hostname + "/callback"
 		fmt.Printf("Link: %s \n", startUrl)
 		fmt.Printf("Running: " + port + "\n")
