@@ -80,20 +80,21 @@ func reqCallback(res http.ResponseWriter, req *http.Request) {
 
 	config := readConfig()
 
-	bearer := base64.RawStdEncoding.EncodeToString([]byte(config.Username + ":" + config.Secret))
+	basic := base64.RawStdEncoding.EncodeToString([]byte(config.Username + ":" + config.Secret))
 
 	// Construct token request body
 	data := url.Values{}
-	data.Set("grant_type", "code")
+	data.Set("grant_type", "authorization_code")
 	data.Set("code", code)
 	data.Set("redirect_uri", config.ClientURL+"/callback")
+	data.Set("client_id", config.Username)
 
 	tokenRequest, err := http.NewRequest("POST", config.TokenUrl, strings.NewReader(data.Encode()))
 	if err != nil {
 		fmt.Printf("Could not create token request %s \n", err)
 	}
 
-	tokenRequest.Header.Add("Authorization", bearer)
+	tokenRequest.Header.Add("Authorization", "Basic "+basic)
 	tokenRequest.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	tokenRequest.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
