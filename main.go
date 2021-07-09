@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"strconv"
@@ -84,6 +85,7 @@ func reqCallback(res http.ResponseWriter, req *http.Request) {
 	// Construct token request body
 	data := url.Values{}
 	data.Set("grant_type", "code")
+	data.Set("code", code)
 	data.Set("redirect_uri", config.ClientURL+"/callback")
 
 	tokenRequest, err := http.NewRequest("POST", config.TokenUrl, strings.NewReader(data.Encode()))
@@ -91,13 +93,18 @@ func reqCallback(res http.ResponseWriter, req *http.Request) {
 		fmt.Printf("Could not create token request %s \n", err)
 	}
 
-	fmt.Println(data.Encode())
-
 	tokenRequest.Header.Add("Authorization", bearer)
 	tokenRequest.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	tokenRequest.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{}
+
+	requestDump, err := httputil.DumpRequest(tokenRequest, true)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(requestDump))
+
 	tokenResponse, err := client.Do(tokenRequest)
 	if err != nil {
 		fmt.Printf("Could not fetch token: %s \n", err)
