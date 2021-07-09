@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
@@ -10,16 +9,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type Config struct {
 	AuthUrl, TokenUrl, ClientURL, Username, Secret string
-}
-
-type TokenRequestBody struct {
-	GrantType, RedirectURI string
 }
 
 func initConfig() {
@@ -85,19 +82,20 @@ func reqCallback(res http.ResponseWriter, req *http.Request) {
 	bearer := base64.RawStdEncoding.EncodeToString([]byte(config.Username + ":" + config.Secret))
 
 	// Construct token request body
-	reqBody := TokenRequestBody{
-		GrantType:   "code",
-		RedirectURI: config.ClientURL + "/callback",
-	}
+	data := url.Values{}
+	data.Set("grant_type", "code")
+	data.Set("redirect_uri", config.ClientURL+"/callback")
 
-	reqBodyJson, _ := json.Marshal(&reqBody)
-	fmt.Printf("%s \n", []byte(reqBodyJson))
-	tokenRequest, err := http.NewRequest("POST", config.TokenUrl, bytes.NewBuffer([]byte(reqBodyJson)))
+	tokenRequest, err := http.NewRequest("POST", config.TokenUrl, strings.NewReader(data.Encode()))
 	if err != nil {
 		fmt.Printf("Could not create token request %s \n", err)
 	}
 
+	fmt.Println(data.Encode())
+
 	tokenRequest.Header.Add("Authorization", bearer)
+	tokenRequest.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
+	tokenRequest.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{}
 	tokenResponse, err := client.Do(tokenRequest)
