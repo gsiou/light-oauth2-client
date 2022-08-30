@@ -116,6 +116,9 @@ func reqCallback(res http.ResponseWriter, req *http.Request) {
 		fmt.Printf("Could not parse token response: %s \n", err)
 	}
 	log.Println(string([]byte(tokenBody)))
+	res.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(res, "<h1>Token Data</h1>")
+	fmt.Fprint(res, string([]byte(tokenBody)))
 }
 
 func main() {
@@ -131,7 +134,7 @@ func main() {
 
 	} else {
 		config := readConfig()
-		startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&redirect_uri=" + config.ClientURL + "/callback"
+		startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&scope=identifiers" + "&redirect_uri=" + config.ClientURL + "/callback"
 		fmt.Printf("Link: %s \n", startUrl)
 		fmt.Printf("Running: " + port + "\n")
 		http.ListenAndServe(":"+port, nil)
