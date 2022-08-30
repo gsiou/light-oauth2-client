@@ -20,6 +20,19 @@ type Config struct {
 	AuthUrl, TokenUrl, ClientURL, Username, Secret string
 }
 
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	Scope        string `json:"scope"`
+}
+
+func getStartUrl() string {
+	config := readConfig()
+	startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&scope=identifiers" + "&redirect_uri=" + config.ClientURL + "/callback"
+	return startUrl
+}
+
 func initConfig() {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Authorization Url: ")
@@ -53,6 +66,12 @@ func initConfig() {
 	file, _ := json.MarshalIndent(config, "", " ")
 
 	_ = ioutil.WriteFile("config.json", file, 0644)
+}
+
+func parseToken(rawjson []byte) TokenResponse {
+	var tokenResponse TokenResponse
+	json.Unmarshal(rawjson, &tokenResponse)
+	return tokenResponse
 }
 
 func readConfig() Config {
@@ -106,19 +125,25 @@ func reqCallback(res http.ResponseWriter, req *http.Request) {
 	}
 	fmt.Println(string(requestDump))
 
-	tokenResponse, err := client.Do(tokenRequest)
+	rawResponse, err := client.Do(tokenRequest)
 	if err != nil {
 		fmt.Printf("Could not fetch token: %s \n", err)
 	}
-	defer tokenResponse.Body.Close()
-	tokenBody, err := ioutil.ReadAll(tokenResponse.Body)
+	defer rawResponse.Body.Close()
+	tokenBody, err := ioutil.ReadAll(rawResponse.Body)
 	if err != nil {
 		fmt.Printf("Could not parse token response: %s \n", err)
 	}
 	log.Println(string([]byte(tokenBody)))
+	tokenResponse := parseToken([]byte(tokenBody))
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprint(res, "<h1>Token Data</h1>")
-	fmt.Fprint(res, string([]byte(tokenBody)))
+	fmt.Fprintf(res, "<p>Access Token: <input readonly type='text' value='%s'/></p>", tokenResponse.AccessToken)
+	fmt.Fprintf(res, "<p>Refresh Token: <input readonly type='text' value='%s'/></p>", tokenResponse.RefreshToken)
+	fmt.Fprintf(res, "<p>Expires In: %d</p>", tokenResponse.ExpiresIn)
+	fmt.Fprintf(res, "<p>Scope: %s</p>", tokenResponse.Scope)
+	fmt.Fprint(res, "<br><br><br>")
+	fmt.Fprintf(res, "<a href='%s'>Start new authorization</a>", getStartUrl())
 }
 
 func main() {
@@ -133,8 +158,7 @@ func main() {
 		initConfig()
 
 	} else {
-		config := readConfig()
-		startUrl := config.AuthUrl + "?response_type=code&client_id=" + config.Username + "&scope=identifiers" + "&redirect_uri=" + config.ClientURL + "/callback"
+		startUrl := getStartUrl()
 		fmt.Printf("Link: %s \n", startUrl)
 		fmt.Printf("Running: " + port + "\n")
 		http.ListenAndServe(":"+port, nil)
